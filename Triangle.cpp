@@ -1,4 +1,5 @@
 #define GL_GLEXT_PROTOTYPES
+#define GLM_ENABLE_EXPERIMENTAL
 #include <stdio.h>
 #include <stdlib.h>
 #include <GL/gl.h>
@@ -7,6 +8,8 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/vec3.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "glm/gtc/quaternion.hpp"
+#include "glm/gtx/quaternion.hpp"
 #include <math.h>
 
 #include <stdio.h>
@@ -102,18 +105,17 @@ int main(int argc, char **argv)
     glAttachShader(shader_program,vs);
     glLinkProgram(shader_program);
     
-
     
-    float cam_speed = 1.0f;
-    float cam_yaw_speed = 10.0f;
-    float cam_pos[] = {0.0f, 0.0f, 10.0f};
-    float cam_yaw = 0.0f;
-    
+    glm::vec3 camPos = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::quat camRot = glm::angleAxis(0.0f,glm::vec3(0.0f, 0.0f, -1.0f));
+       
 	
     glm::mat4 ident = glm::mat4(1.0f);
-	glm::mat4 T = glm::translate(ident,glm::vec3(-cam_pos[0],-cam_pos[1],-cam_pos[2]));
-	glm::mat4 R = glm::rotate(ident, cam_yaw, glm::vec3(-1.0f,0.0f,0.0f));
+	glm::mat4 T = glm::translate(ident,-camPos);
+	glm::mat4 R = glm::toMat4(camRot);
 	glm::mat4 view_mat = R * T;
+	
+	
 	float near = 0.1f;
 	float far = 100.0f;
 	float fov = (67.0f * 2 * M_PI) / 360;
@@ -142,9 +144,11 @@ int main(int argc, char **argv)
 	
     while (1)
     {
-		glm::mat4 T = glm::translate(ident,glm::vec3(-cam_pos[0],-cam_pos[1],-cam_pos[2]));
-		glm::mat4 R = glm::rotate(ident, cam_yaw, glm::vec3(0.0f,-1.0f,0.0f));
-		glm::mat4 view_mat = R * T;
+		
+		T = glm::translate(ident,-camPos);
+		R = glm::toMat4(camRot);
+		view_mat = R * T;
+		
 		glUseProgram(shader_program);
 		glUniformMatrix4fv(view_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(view_mat));
 		
@@ -163,36 +167,48 @@ int main(int argc, char **argv)
                 case KeyPress:
                 {
                     KeySym     keysym;
-                    XKeyEvent *kevent;
                     char       buffer[1];
-                    kevent = (XKeyEvent *) &event;
                     if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_Escape))
                     {
                         exit(0);
                     }
                     if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_w))
                     {
-                        cam_pos[2]-=.5;
+                        glm::mat3 camRotMat = glm::toMat3(camRot);
+                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, -1.0f);
+                        glm::vec3 finalMovement = movement * camRotMat;
+                        camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_s))
                     {
-                        cam_pos[2]+=.5;
+                        glm::mat3 camRotMat = glm::toMat3(camRot);
+                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, 1.0f);
+                        glm::vec3 finalMovement = movement * camRotMat;
+                        camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_a))
                     {
-                        cam_pos[0]-=.5;
+                        glm::mat3 camRotMat = glm::toMat3(camRot);
+                        glm::vec3 movement = glm::vec3(-1.0f, 0.0f, 0.0f);
+                        glm::vec3 finalMovement = movement * camRotMat;
+                        camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_d))
                     {
-                        cam_pos[0]+=.5;
+                        glm::mat3 camRotMat = glm::toMat3(camRot);
+                        glm::vec3 movement = glm::vec3(1.0f, 0.0f, 0.0f);
+                        glm::vec3 finalMovement = movement * camRotMat;
+                        camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_q))
                     {
-                        cam_yaw+=.05;
+                        glm::quat rotateLeft = glm::angleAxis(glm::radians(-5.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+                        camRot *= rotateLeft;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_e))
                     {
-                        cam_yaw-=.05;
+                        glm::quat rotateRight = glm::angleAxis(glm::radians(5.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+                        camRot *= rotateRight;
                     }
 
 
