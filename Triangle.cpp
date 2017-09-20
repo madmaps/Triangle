@@ -78,11 +78,11 @@ int main(int argc, char **argv)
     "layout(location = 0) in vec3 vp;"
     "layout(location = 1) in vec3 vc;"
     "out vec3 color;"
-    "uniform mat4 view, proj;"
+    "uniform mat4 view, proj, model;"
     "void main()"
     "{"
     "	color = vc;"
-    "	gl_Position = proj * view * vec4(vp,1.0);"
+    "	gl_Position = proj * view * model * vec4(vp,1.0);"
     "}";
     
     const char* fragment_shader = 
@@ -108,12 +108,22 @@ int main(int argc, char **argv)
     
     glm::vec3 camPos = glm::vec3(0.0f, 0.0f, 10.0f);
     glm::quat camRot = glm::angleAxis(0.0f,glm::vec3(0.0f, 0.0f, -1.0f));
+    
+    glm::vec3 modelPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::quat modelRot = glm::angleAxis(0.0f,glm::vec3(0.0f, 0.0f, -1.0f));
+    
+    
        
 	
     glm::mat4 ident = glm::mat4(1.0f);
 	glm::mat4 T = glm::translate(ident,-camPos);
 	glm::mat4 R = glm::toMat4(camRot);
 	glm::mat4 view_mat = R * T;
+	
+	glm::mat4 modelTranslate = glm::translate(ident,modelPos);
+	glm::mat4 modelRotation = glm::toMat4(modelRot);
+	glm::mat4 modelMatrix = modelTranslate * modelRotation;
+	
 	
 	
 	float near = 0.1f;
@@ -134,9 +144,14 @@ int main(int argc, char **argv)
 	int view_mat_location = glGetUniformLocation(shader_program,"view");
     glUseProgram(shader_program);
     glUniformMatrix4fv(view_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(view_mat));
+    
     int proj_mat_location = glGetUniformLocation(shader_program,"proj");
     glUseProgram(shader_program);
     glUniformMatrix4fv(proj_mat_location,1,GL_FALSE,proj_mat);
+    
+    int model_mat_location = glGetUniformLocation(shader_program,"model");
+    glUseProgram(shader_program);
+    glUniformMatrix4fv(model_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(modelMatrix));
 						
 	
     
@@ -149,8 +164,15 @@ int main(int argc, char **argv)
 		R = glm::toMat4(camRot);
 		view_mat = R * T;
 		
+		modelTranslate = glm::translate(ident,modelPos);
+		modelRotation = glm::toMat4(modelRot);
+		modelMatrix = modelTranslate * modelRotation;
+		
+		
+		
 		glUseProgram(shader_program);
 		glUniformMatrix4fv(view_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(view_mat));
+		glUniformMatrix4fv(model_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(modelMatrix));
 		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(shader_program);
@@ -175,41 +197,68 @@ int main(int argc, char **argv)
                     if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_w))
                     {
                         glm::mat3 camRotMat = glm::toMat3(camRot);
-                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, -1.0f);
+                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, -0.3f);
                         glm::vec3 finalMovement = movement * camRotMat;
                         camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_s))
                     {
                         glm::mat3 camRotMat = glm::toMat3(camRot);
-                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, 1.0f);
+                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, 0.3f);
                         glm::vec3 finalMovement = movement * camRotMat;
                         camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_a))
                     {
                         glm::mat3 camRotMat = glm::toMat3(camRot);
-                        glm::vec3 movement = glm::vec3(-1.0f, 0.0f, 0.0f);
+                        glm::vec3 movement = glm::vec3(-0.3f, 0.0f, 0.0f);
                         glm::vec3 finalMovement = movement * camRotMat;
                         camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_d))
                     {
                         glm::mat3 camRotMat = glm::toMat3(camRot);
-                        glm::vec3 movement = glm::vec3(1.0f, 0.0f, 0.0f);
+                        glm::vec3 movement = glm::vec3(0.3f, 0.0f, 0.0f);
                         glm::vec3 finalMovement = movement * camRotMat;
                         camPos += finalMovement;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_q))
                     {
-                        glm::quat rotateLeft = glm::angleAxis(glm::radians(-5.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+                        glm::quat rotateLeft = glm::angleAxis(glm::radians(-2.0f),glm::vec3(0.0f, 1.0f, 0.0f));
                         camRot *= rotateLeft;
                     }
 					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_e))
                     {
-                        glm::quat rotateRight = glm::angleAxis(glm::radians(5.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+                        glm::quat rotateRight = glm::angleAxis(glm::radians(2.0f),glm::vec3(0.0f, 1.0f, 0.0f));
                         camRot *= rotateRight;
                     }
+                    if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_j))
+                    {
+                        glm::quat rotateLeft = glm::angleAxis(glm::radians(2.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+                        modelRot *= rotateLeft;
+                    }
+					if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_l))
+                    {
+                        glm::quat rotateRight = glm::angleAxis(glm::radians(-2.0f),glm::vec3(0.0f, 1.0f, 0.0f));
+                        modelRot *= rotateRight;
+                    }
+                    if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_i))
+                    {
+                        glm::mat3 modelRotMat = glm::toMat3(modelRot);
+                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, -0.3f);
+                        glm::vec3 finalMovement = modelRotMat * movement;
+                        modelPos += finalMovement;
+                    }
+                    if((XLookupString((XKeyEvent *)&event, buffer, 1, &keysym, NULL) == 1) && (keysym == (KeySym)XK_k))
+                    {
+                        glm::mat3 modelRotMat = glm::toMat3(modelRot);
+                        glm::vec3 movement = glm::vec3(0.0f, 0.0f, 0.3f);
+                        glm::vec3 finalMovement = modelRotMat * movement;
+                        modelPos += finalMovement;
+                    }
+
+
+
 
 
 
