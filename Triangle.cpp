@@ -48,24 +48,24 @@ int main(int argc, char **argv)
 	glDepthFunc(GL_LESS);
     
     GLfloat points[] = {0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
-    GLfloat colors[] = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat normals[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
     
     GLuint points_vbo = 0;
     glGenBuffers(1, &points_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(points),points,GL_STATIC_DRAW);    
     
-    GLuint colors_vbo = 0;
-    glGenBuffers(1, &colors_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors),colors,GL_STATIC_DRAW);
+    GLuint normals_vbo = 0;
+    glGenBuffers(1, &normals_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, normals_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(normals),normals,GL_STATIC_DRAW);
     
     GLuint vao = 0;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER,points_vbo);
     glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,NULL);
-    glBindBuffer(GL_ARRAY_BUFFER,colors_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER,normals_vbo);
     glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,0,NULL);
         
     glEnableVertexAttribArray(0);
@@ -75,23 +75,53 @@ int main(int argc, char **argv)
     
     const char* vertex_shader =
     "#version 410\n"
-    "layout(location = 0) in vec3 vp;"
-    "layout(location = 1) in vec3 vc;"
-    "out vec3 color;"
+    "layout(location = 0) in vec3 vertex_position;"
+    "layout(location = 1) in vec3 vertex_normal;"
+    "out vec3 position_eye,normal_eye;"
     "uniform mat4 view, proj, model;"
     "void main()"
     "{"
-    "	color = vc;"
-    "	gl_Position = proj * view * model * vec4(vp,1.0);"
+    "	position_eye = vec3(view * model * vec4(vertex_position, 1.0));"
+    "	normal_eye = vec3(view * model * vec4(vertex_normal, 0.0));"
+    "	gl_Position = proj * vec4(position_eye, 1.0);"
     "}";
     
     const char* fragment_shader = 
     "#version 410\n"
-    "in vec3 color;"
+    "uniform mat4 view;"
+    "in vec3 position_eye, normal_eye;"
+    "vec3 light_position_world = vec3(0.0, 0.0, 2.0);"
+    "vec3 Ls = vec3(1.0, 1.0, 1.0);"
+    "vec3 Ld = vec3(0.7, 0.7, 0.7);"
+    "vec3 La = vec3(0.2, 0.2, 0.2);"
+    
+    "vec3 Ks = vec3(0.2, 0.2, 0.2);"
+    "vec3 Kd = vec3(1.0, 0.5, 0.0);"
+    "vec3 Ka = vec3(1.0, 1.0, 1.0);"
+    "float specular_exponent = 100.0;"
+        
     "out vec4 frag_color;"
+    
     "void main()"
     "{"
-    "	frag_color = vec4(color,1.0f);"
+    " 	vec3 Ia = La * Ka;"
+    
+    
+	"	vec3 light_position_eye = vec3(view * vec4(light_position_world, 1.0));"
+	"	vec3 distance_to_light_eye = light_position_eye - position_eye;"
+	"	vec3 direction_to_light_eye = normalize(distance_to_light_eye);"
+	"	float dot_prod = dot(direction_to_light_eye, normal_eye);"
+	"	dot_prod = max(dot_prod, 0.0);"
+	"	vec3 Id = Ld * Kd * dot_prod;"
+	
+	"	vec3 reflection_eye = reflect(-direction_to_light_eye, normal_eye);"
+	"	vec3 surface_to_viewer_eye = normalize(-position_eye);"
+	"	float dot_prod_specular = dot(reflection_eye, surface_to_viewer_eye);"
+	"	dot_prod_specular = max(dot_prod_specular, 0.0);"
+	"	float specular_factor = pow(dot_prod_specular, specular_exponent);"
+	"	vec3 Is = Ls* Ks * specular_factor;"
+	
+    "	frag_color = vec4(Is + Id + Ia, 1.0);"
     "}";
     
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
@@ -256,11 +286,6 @@ int main(int argc, char **argv)
                         glm::vec3 finalMovement = modelRotMat * movement;
                         modelPos += finalMovement;
                     }
-
-
-
-
-
 
                     break;
                 }
