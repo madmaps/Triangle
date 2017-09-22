@@ -10,6 +10,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/quaternion.hpp"
+#include "BmpLoader.h"
 #include <math.h>
 
 #include <stdio.h>
@@ -43,12 +44,27 @@ int main(int argc, char **argv)
     XSetStandardProperties(dpy, win, "OpenGl Test", "OpenGl Test", None, argv, argc, NULL);
     glXMakeCurrent(dpy, win, cx);
     XMapWindow(dpy, win);
-
+    
+    
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	
+	bmpLoader textureFile;
+    textureFile.loadFile("Brick.bmp");
+    GLuint tex = 0;
+    glGenTextures(1,&tex);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureFile.getWidth(), textureFile.getHeigth(), 0, GL_BGR,GL_UNSIGNED_BYTE, textureFile.getData());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    
     
     GLfloat points[] = {0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
     GLfloat normals[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat texCoords[] = {0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f};
     
     GLuint points_vbo = 0;
     glGenBuffers(1, &points_vbo);
@@ -60,16 +76,24 @@ int main(int argc, char **argv)
     glBindBuffer(GL_ARRAY_BUFFER, normals_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(normals),normals,GL_STATIC_DRAW);
     
+    GLuint texCoords_vbo;
+    glGenBuffers(1, &texCoords_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, texCoords_vbo);
+    glBufferData(GL_ARRAY_BUFFER,sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+    
     GLuint vao = 0;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER,points_vbo);
-    glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,NULL);
-    glBindBuffer(GL_ARRAY_BUFFER,normals_vbo);
-    glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,0,NULL);
+    glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glBindBuffer(GL_ARRAY_BUFFER, normals_vbo);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glBindBuffer(GL_ARRAY_BUFFER, texCoords_vbo);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, NULL);
         
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
     
     
     
@@ -77,10 +101,13 @@ int main(int argc, char **argv)
     "#version 410\n"
     "layout(location = 0) in vec3 vertex_position;"
     "layout(location = 1) in vec3 vertex_normal;"
-    "out vec3 position_eye,normal_eye;"
+    "layout(location = 2) in vec2 vertex_text;"
+    "out vec3 position_eye, normal_eye;"
+    "out vec2 texture_coordinates;"
     "uniform mat4 view, proj, model;"
     "void main()"
     "{"
+    "	texture_coordinates = vertex_text;"
     "	position_eye = vec3(view * model * vec4(vertex_position, 1.0));"
     "	normal_eye = vec3(view * model * vec4(vertex_normal, 0.0));"
     "	gl_Position = proj * vec4(position_eye, 1.0);"
@@ -88,16 +115,19 @@ int main(int argc, char **argv)
     
     const char* fragment_shader = 
     "#version 410\n"
+    "uniform sampler2D basic_texture;"
     "uniform mat4 view;"
     "in vec3 position_eye, normal_eye;"
+    "in vec2 texture_coordinates;"
     "vec3 light_position_world = vec3(0.0, 0.0, 2.0);"
     "vec3 Ls = vec3(1.0, 1.0, 1.0);"
     "vec3 Ld = vec3(0.7, 0.7, 0.7);"
     "vec3 La = vec3(0.2, 0.2, 0.2);"
     
-    "vec3 Ks = vec3(0.2, 0.2, 0.2);"
-    "vec3 Kd = vec3(1.0, 0.5, 0.0);"
-    "vec3 Ka = vec3(1.0, 1.0, 1.0);"
+    "vec4 texel = texture(basic_texture, texture_coordinates);"
+    "vec3 Ks = vec3(0.1, 0.1, 0.1);"
+    "vec3 Kd = vec3(texel.xyz);"
+    "vec3 Ka = vec3(texel.xyz);"
     "float specular_exponent = 100.0;"
         
     "out vec4 frag_color;"
@@ -182,6 +212,10 @@ int main(int argc, char **argv)
     int model_mat_location = glGetUniformLocation(shader_program,"model");
     glUseProgram(shader_program);
     glUniformMatrix4fv(model_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(modelMatrix));
+    
+    int tex_loc = glGetUniformLocation(shader_program,"basic_texture");
+    glUseProgram(shader_program);
+    glUniform1i(tex_loc,0);
 						
 	
     
