@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     
     GLfloat points[] = {0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
     GLfloat normals[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
-    GLfloat texCoords[] = {0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f};
+    GLfloat texCoords[] = {0.5f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
     
     GLuint points_vbo = 0;
     glGenBuffers(1, &points_vbo);
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
     "in vec2 texture_coordinates;"
     "vec3 light_position_world = vec3(0.0, 0.0, 2.0);"
     "vec3 Ls = vec3(1.0, 1.0, 1.0);"
-    "vec3 Ld = vec3(0.7, 0.7, 0.7);"
+    "vec3 Ld = vec3(1.0, 1.0, 1.0);"
     "vec3 La = vec3(0.1, 0.1, 0.1);"
     
     "vec4 texel = texture(basic_texture, texture_coordinates);"
