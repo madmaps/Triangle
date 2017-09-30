@@ -7,11 +7,20 @@ LIBS = -lGL -lX11
 
 all: Triangle
 
-Triangle: Triangle.o
-	$(CC) Triangle.o -o Triangle.out $(LIBS)
+Triangle: Triangle.o 
+	$(CC) DibHeader.o BitMapHeader.o BmpLoader.o Triangle.o -o Triangle.out $(LIBS)
 
-Triangle.o: Triangle.cpp
+Triangle.o: BmpLoader.o Triangle.cpp
 	$(CC) $(CFLAGS) Triangle.cpp 
+	
+BmpLoader.o: DibHeader.o BitMapHeader.o BmpLoader.cpp
+	$(CC) $(CFLAGS) BmpLoader.cpp
+	
+DibHeader.o: DibHeader.cpp
+	$(CC) $(CFLAGS) DibHeader.cpp
+	
+BitMapHeader.o: BitMapHeader.cpp
+	$(CC) $(CFLAGS) BitMapHeader.cpp
 
 clean:
 	rm -rf *.o core.* Triangle.out

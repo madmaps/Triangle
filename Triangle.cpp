@@ -56,10 +56,11 @@ int main(int argc, char **argv)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureFile.getWidth(), textureFile.getHeigth(), 0, GL_BGR,GL_UNSIGNED_BYTE, textureFile.getData());
+    glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     
     
     GLfloat points[] = {0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
@@ -122,10 +123,10 @@ int main(int argc, char **argv)
     "vec3 light_position_world = vec3(0.0, 0.0, 2.0);"
     "vec3 Ls = vec3(1.0, 1.0, 1.0);"
     "vec3 Ld = vec3(0.7, 0.7, 0.7);"
-    "vec3 La = vec3(0.2, 0.2, 0.2);"
+    "vec3 La = vec3(0.1, 0.1, 0.1);"
     
     "vec4 texel = texture(basic_texture, texture_coordinates);"
-    "vec3 Ks = vec3(0.1, 0.1, 0.1);"
+    "vec3 Ks = vec3(0.5, 0.5, 0.5);"
     "vec3 Kd = vec3(texel.xyz);"
     "vec3 Ka = vec3(texel.xyz);"
     "float specular_exponent = 100.0;"
