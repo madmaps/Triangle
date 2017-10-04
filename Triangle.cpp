@@ -49,13 +49,26 @@ int main(int argc, char **argv)
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	
-	bmpLoader textureFile;
-    textureFile.loadFile("Brick.bmp");
+	bmpLoader brickDefuseFile;
+    brickDefuseFile.loadFile("Textures/brick.bmp");
     GLuint tex = 0;
     glGenTextures(1,&tex);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureFile.getWidth(), textureFile.getHeigth(), 0, GL_BGR,GL_UNSIGNED_BYTE, textureFile.getData());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, brickDefuseFile.getWidth(), brickDefuseFile.getHeigth(), 0, GL_BGR,GL_UNSIGNED_BYTE, brickDefuseFile.getData());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    
+    bmpLoader brickNormalFile;
+    brickNormalFile.loadFile("Textures/brickNormal.bmp");
+    GLuint tex1 = 0;
+    glGenTextures(1,&tex1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, tex1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, brickNormalFile.getWidth(), brickNormalFile.getHeigth(), 0, GL_BGR, GL_UNSIGNED_BYTE, brickNormalFile.getData());
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -63,9 +76,26 @@ int main(int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     
     
+    glm::vec3 tangent = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 biTangent = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 normalVec = glm::vec3(0.0f, 0.0f, 0.0f);
+    
+    glm::vec3 tempTangent = glm::normalize(tangent - normalVec * glm::dot(normalVec,tangent));
+    
+    float det = (glm::dot(glm::cross(normalVec,tangent),biTangent));
+    if(det < 0.0f)
+    {
+		det = -1.0f;
+	}
+	else
+	{
+		det = 1.0f;
+	}
+        
     GLfloat points[] = {0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
     GLfloat normals[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
     GLfloat texCoords[] = {0.5f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+    GLfloat tangents[] = {tempTangent.x,tempTangent.y,tempTangent.z,det,tempTangent.x,tempTangent.y,tempTangent.z,det,tempTangent.x,tempTangent.y,tempTangent.z,det};
     
     GLuint points_vbo = 0;
     glGenBuffers(1, &points_vbo);
@@ -103,22 +133,34 @@ int main(int argc, char **argv)
     "layout(location = 0) in vec3 vertex_position;"
     "layout(location = 1) in vec3 vertex_normal;"
     "layout(location = 2) in vec2 vertex_text;"
-    "out vec3 position_eye, normal_eye;"
+    "layout(location = 3) in vec4 vtangent;"
+    "out vec3 view_dir_tan;"
+    "out vec3 light_dir_tan;"
     "out vec2 texture_coordinates;"
     "uniform mat4 view, proj, model;"
+    "uniform vec3 cameraPosition_world;"
     "void main()"
     "{"
+   "	gl_Position = proj * view * model * vec4(vertex_position,1.0);"
     "	texture_coordinates = vertex_text;"
-    "	position_eye = vec3(view * model * vec4(vertex_position, 1.0));"
-    "	normal_eye = vec3(view * model * vec4(vertex_normal, 0.0));"
-    "	gl_Position = proj * vec4(position_eye, 1.0);"
+    
+    "	vec3 lightDirection_world = normalize(vec3(0.0, 0.0, -2.0) - cameraPosition_world);"
+    "	vec3 bitangent = cross(vertex_normal, vtangent.xyz) * vtangent.w;"
+    
+    "	vec3 cameraPosition_local = vec3(inverse(model) * vec4(cameraPosition_world,1.0));"
+    "	vec3 lightDirection_local = vec3(inverse(model) * vec4(lightDirection_world,0.0));"
+    "	vec3 viewDirection_local = normalize(cameraPosition_local - vertex_position);"
+    
+    "	view_dir_tan = vec3(dot(vtangent.xyz, viewDirection_local),dot(bitangent, viewDirection_local), dot(vertex_normal, viewDirection_local));"
+    "	light_dir_tan = vec3(dot(vtangent.xyz, lightDirection_local),dot(bitangent,lightDirection_local), dot(vertex_normal, lightDirection_local));"
     "}";
     
     const char* fragment_shader = 
     "#version 410\n"
     "uniform sampler2D basic_texture;"
-    "uniform mat4 view;"
-    "in vec3 position_eye, normal_eye;"
+    "uniform sampler2D normal_map;"
+    "in vec3 view_dir_tan;"
+    "in vec3 light_dir_tan;"
     "in vec2 texture_coordinates;"
     "vec3 light_position_world = vec3(0.0, 0.0, 2.0);"
     "vec3 Ls = vec3(1.0, 1.0, 1.0);"
@@ -136,21 +178,20 @@ int main(int argc, char **argv)
     "void main()"
     "{"
     " 	vec3 Ia = La * Ka;"
-    
-    
-	"	vec3 light_position_eye = vec3(view * vec4(light_position_world, 1.0));"
-	"	vec3 distance_to_light_eye = light_position_eye - position_eye;"
-	"	vec3 direction_to_light_eye = normalize(distance_to_light_eye);"
-	"	float dot_prod = dot(direction_to_light_eye, normal_eye);"
-	"	dot_prod = max(dot_prod, 0.0);"
-	"	vec3 Id = Ld * Kd * dot_prod;"
+    "	vec3 normal_tan = texture(normal_map, texture_coordinates).rgb;"
+    "	normal_tan = normalize(normal_tan * 2.0 - 1.0);"
+    "	vec3 direction_to_light_tan = normalize(-light_dir_tan);"
+    "	float dot_prod = dot(direction_to_light_tan, normal_tan);"
+    "	dot_prod = max(dot_prod, 0.0);"
+    "	vec3 Id = Kd * Ld * dot_prod;"
 	
-	"	vec3 reflection_eye = reflect(-direction_to_light_eye, normal_eye);"
-	"	vec3 surface_to_viewer_eye = normalize(-position_eye);"
-	"	float dot_prod_specular = dot(reflection_eye, surface_to_viewer_eye);"
-	"	dot_prod_specular = max(dot_prod_specular, 0.0);"
-	"	float specular_factor = pow(dot_prod_specular, specular_exponent);"
-	"	vec3 Is = Ls* Ks * specular_factor;"
+	//"	vec3 reflection_eye = reflect(-direction_to_light_eye, normal_eye);"
+	//"	vec3 surface_to_viewer_eye = normalize(-position_eye);"
+	//"	float dot_prod_specular = dot(reflection_eye, surface_to_viewer_eye);"
+	//"	dot_prod_specular = max(dot_prod_specular, 0.0);"
+	//"	float specular_factor = pow(dot_prod_specular, specular_exponent);"
+	//"	vec3 Is = Ls* Ks * specular_factor;"
+	"	vec3 Is = vec3(0.0, 0.0, 0.0);"
 	
     "	frag_color = vec4(Is + Id + Ia, 1.0);"
     "}";
@@ -214,9 +255,17 @@ int main(int argc, char **argv)
     glUseProgram(shader_program);
     glUniformMatrix4fv(model_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(modelMatrix));
     
+    int camera_vec_location = glGetUniformLocation(shader_program,"cameraPosition_world");
+    glUseProgram(shader_program);
+    glUniform3fv(camera_vec_location,1,(const float*)glm::value_ptr(camPos));
+    
     int tex_loc = glGetUniformLocation(shader_program,"basic_texture");
     glUseProgram(shader_program);
     glUniform1i(tex_loc,0);
+    
+    int norm_loc = glGetUniformLocation(shader_program,"normal_map");
+    glUseProgram(shader_program);
+    glUniform1i(norm_loc,1);
 						
 	
     
@@ -238,6 +287,7 @@ int main(int argc, char **argv)
 		glUseProgram(shader_program);
 		glUniformMatrix4fv(view_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(view_mat));
 		glUniformMatrix4fv(model_mat_location,1,GL_FALSE,(const float*)glm::value_ptr(modelMatrix));
+		glUniform3fv(camera_vec_location,1,(const float*)glm::value_ptr(camPos));
 		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(shader_program);
