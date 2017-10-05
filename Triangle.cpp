@@ -75,6 +75,32 @@ int main(int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     
+    bmpLoader brickSpecularFile;
+    brickSpecularFile.loadFile("Textures/SpecularMap.bmp");
+    GLuint tex2 = 0;
+    glGenTextures(1,&tex2);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, tex2);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, brickSpecularFile.getWidth(), brickSpecularFile.getHeigth(), 0, GL_BGR, GL_UNSIGNED_BYTE, brickSpecularFile.getData());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    
+    bmpLoader brickOcclusionFile;
+    brickOcclusionFile.loadFile("Textures/AmbientOcclusionMap.bmp");
+    GLuint tex3 = 0;
+    glGenTextures(1,&tex3);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, tex3);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, brickOcclusionFile.getWidth(), brickOcclusionFile.getHeigth(), 0, GL_BGR, GL_UNSIGNED_BYTE, brickOcclusionFile.getData());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    
     
     glm::vec3 tangent = glm::vec3(1.0f, 0.0f, 0.0f);
     glm::vec3 biTangent = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -159,6 +185,8 @@ int main(int argc, char **argv)
     "#version 410\n"
     "uniform sampler2D basic_texture;"
     "uniform sampler2D normal_map;"
+    "uniform sampler2D specular_map;"
+    "uniform sampler2D occlusion_map;"
     "in vec3 view_dir_tan;"
     "in vec3 light_dir_tan;"
     "in vec2 texture_coordinates;"
@@ -168,9 +196,11 @@ int main(int argc, char **argv)
     "vec3 La = vec3(0.1, 0.1, 0.1);"
     
     "vec4 texel = texture(basic_texture, texture_coordinates);"
-    "vec3 Ks = vec3(0.5, 0.5, 0.5);"
-    "vec3 Kd = vec3(texel.xyz);"
-    "vec3 Ka = vec3(texel.xyz);"
+    "vec4 specularTexel = texture(specular_map, texture_coordinates);"
+    "vec4 occlusionTexel = texture(occlusion_map, texture_coordinates);"
+    "vec3 Ks = vec3(specularTexel.rgb);"
+    "vec3 Kd = vec3(texel.rgb);"
+    "vec3 Ka = vec3(occlusionTexel.rgb);"
     "float specular_exponent = 100.0;"
         
     "out vec4 frag_color;"
@@ -185,14 +215,11 @@ int main(int argc, char **argv)
     "	dot_prod = max(dot_prod, 0.0);"
     "	vec3 Id = Kd * Ld * dot_prod;"
 	
-	//"	vec3 reflection_eye = reflect(-direction_to_light_eye, normal_eye);"
-	//"	vec3 surface_to_viewer_eye = normalize(-position_eye);"
-	//"	float dot_prod_specular = dot(reflection_eye, surface_to_viewer_eye);"
-	//"	dot_prod_specular = max(dot_prod_specular, 0.0);"
-	//"	float specular_factor = pow(dot_prod_specular, specular_exponent);"
-	//"	vec3 Is = Ls* Ks * specular_factor;"
-	"	vec3 Is = vec3(0.0, 0.0, 0.0);"
-	
+	"	vec3 reflection_tan = reflect(normalize(light_dir_tan),normal_tan);"
+	"	float dot_prod_specular = dot(reflection_tan, normalize(view_dir_tan));"
+	"	dot_prod_specular = max(dot_prod_specular, 0.0);"
+	"	float specular_factor = pow(dot_prod_specular, 100.0);"
+	"	vec3 Is = Ls * Ks * specular_factor;"
     "	frag_color = vec4(Is + Id + Ia, 1.0);"
     "}";
     
@@ -267,8 +294,13 @@ int main(int argc, char **argv)
     glUseProgram(shader_program);
     glUniform1i(norm_loc,1);
 						
-	
+	int spec_loc = glGetUniformLocation(shader_program,"specular_map");
+    glUseProgram(shader_program);
+    glUniform1i(spec_loc,2);
     
+    int occl_loc = glGetUniformLocation(shader_program,"occlusion_map");
+    glUseProgram(shader_program);
+    glUniform1i(occl_loc,3);
     
 	
     while (1)
