@@ -138,6 +138,11 @@ int main(int argc, char **argv)
     glBindBuffer(GL_ARRAY_BUFFER, texCoords_vbo);
     glBufferData(GL_ARRAY_BUFFER,sizeof(texCoords), texCoords, GL_STATIC_DRAW);
     
+    GLuint tangents_vbo;
+    glGenBuffers(1, &tangents_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, tangents_vbo);
+    glBufferData(GL_ARRAY_BUFFER,sizeof(tangents), tangents, GL_STATIC_DRAW);
+    
     GLuint vao = 0;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -147,10 +152,13 @@ int main(int argc, char **argv)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glBindBuffer(GL_ARRAY_BUFFER, texCoords_vbo);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+    glBindBuffer(GL_ARRAY_BUFFER, tangents_vbo);
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, NULL);
         
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
     
     
     
